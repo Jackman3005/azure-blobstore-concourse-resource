@@ -5,21 +5,22 @@ require_relative 'azure-blobstore-concourse-resource-common'
 request = JSON.parse(STDIN.read)
 
 source = request.fetch("source")
-file = request["params"]["file"]
+file_match_string = request["params"]["file"]
+new_file_name = request["params"]["newFileName"] # optional parameter
 
 src_dir = ARGV[0]
 Dir.chdir src_dir
-src_files = Dir.glob(file)
+matching_files = Dir.glob(file_match_string)
 
-if src_files.size > 1
-  STDERR.puts "multiple files are matched for #{file}"
+if matching_files.size > 1
+  STDERR.puts "multiple files are matched for #{file_match_string}"
   exit 1
-elsif src_files.size == 0
-  STDERR.puts "no matched file found for #{file}"
+elsif matching_files.size == 0
+  STDERR.puts "no matched file found for #{file_match_string}"
   exit 1
 end
 
-src_file = src_files.first
+file_to_upload = matching_files.first
 @storage_account_name = source["storage_account_name"]
 @storage_access_key = source["storage_access_key"]
 @container = source["container"]
@@ -33,14 +34,20 @@ end
 
 check_source
 
-if @regexp.include?("/")
-  dst_dir = File.dirname(source["regexp"])
-  dst_path = File.join(dst_dir, File.basename(src_file))
+if new_file_name.nil?
+  dest_file_name = file_to_upload
 else
-  dst_path = File.basename(src_file)
+  dest_file_name = new_file_name
 end
 
-response = azure_cli("upload --quiet --container #{@container} --blob #{dst_path} --file #{src_file}")
+if @regexp.include?("/")
+  dst_dir = File.dirname(source["regexp"])
+  dst_path = File.join(dst_dir, File.basename(dest_file_name))
+else
+  dst_path = File.basename(dest_file_name)
+end
+
+response = azure_cli("upload --quiet --container #{@container} --blob #{dst_path} --file #{file_to_upload}")
 metadata = []
 response.each_pair {|k,v| metadata << {"name"=> k.to_s, "value"=>v.to_s }  }
 puts JSON.dump({ "version" => { "path" => dst_path },
