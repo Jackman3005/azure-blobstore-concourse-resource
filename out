@@ -27,7 +27,7 @@ src_file = src_files.first
 @regexp = source["regexp"]
 
 if @storage_access_key.nil?
-  STDERR.puts "PUT on public Azure blobstore container is not permited. Please provide storage_access_key."
+  STDERR.puts "PUT on public Azure blobstore container is not permitted. Please provide storage_access_key."
   exit 1
 end
 
